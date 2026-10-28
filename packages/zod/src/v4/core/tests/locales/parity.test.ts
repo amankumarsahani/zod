@@ -49,3 +49,24 @@ test("every locale sizes each origin en sizes", () => {
 
   expect(gaps).toEqual([]);
 });
+
+// a size fallback interpolating an absent unit, or a single-value `invalid_value` reading the wrong index, puts the word `undefined` in the user's message — `lt` did the first for number/bigint/date/map, `hy` the second
+test("no locale renders the literal string undefined", () => {
+  const probes: Array<{ code: string; origin?: string; [key: string]: unknown }> = [
+    { code: "invalid_value", values: ["tuna"], input: "salmon", path: [] },
+    { code: "too_big", origin: "number", maximum: 5, inclusive: true, input: 9, path: [] },
+    { code: "too_small", origin: "number", minimum: 5, inclusive: true, input: 1, path: [] },
+    { code: "too_big", origin: "bigint", maximum: 5, inclusive: true, input: 9, path: [] },
+    { code: "too_big", origin: "date", maximum: 5, inclusive: true, input: 9, path: [] },
+    { code: "too_big", origin: "map", maximum: 1, inclusive: true, input: new Map(), path: [] },
+  ];
+
+  const leaks = names.flatMap((name) => {
+    const map = locales[name]!().localeError as (iss: unknown) => string | undefined;
+    return probes
+      .filter((probe) => String(map(probe) ?? "").includes("undefined"))
+      .map((probe) => (probe.origin ? `${name}.${probe.code}.${probe.origin}` : `${name}.${probe.code}`));
+  });
+
+  expect(leaks).toEqual([]);
+});
